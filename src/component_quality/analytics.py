@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import statistics
 from dataclasses import dataclass
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence
 
 
 @dataclass(frozen=True)
@@ -59,3 +59,21 @@ def responsivity(current_ma: float, optical_power_mw: float) -> float:
     if optical_power_mw <= 0:
         raise ValueError("optical power must be positive")
     return current_ma / optical_power_mw
+
+
+def per_lab_means(pairs: Iterable[tuple[str, float]]) -> dict[str, float]:
+    """按实验室分组计算均值，输入为 (实验室, 数值) 序列。"""
+
+    groups: dict[str, list[float]] = {}
+    for lab, value in pairs:
+        groups.setdefault(lab, []).append(float(value))
+    return {lab: statistics.fmean(values) for lab, values in sorted(groups.items())}
+
+
+def max_pairwise_deviation(means: Mapping[str, float]) -> float:
+    """实验室均值之间的最大两两偏差；不足两个实验室时为零。"""
+
+    values = list(means.values())
+    if len(values) < 2:
+        return 0.0
+    return max(values) - min(values)

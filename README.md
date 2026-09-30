@@ -6,7 +6,7 @@
 
 - `src/battery_logistics/`：储能场站、调拨走廊、资产批次、容量申请、分配与处置情景；
 - `src/battery_assurance/`：电池资产、证据版本、评估协议、观测导入、排除复核、分析任务与准入决定；
-- `src/component_quality/`：电芯组件批次、响应测量、统计分析、账号权限和质量审批；
+- `src/component_quality/`：电芯组件批次、检测方法版本治理、实验室校准与参考样件比对资质、原始读数溯源、跨实验室比对调查、不可变报告和质量审批；
 - `fixtures/`：离线验收使用的评估协议与结构化观测；
 - `tests/`：领域规则、错误边界、事务、权限、HTTP API 和命令行验收测试。
 
@@ -47,3 +47,13 @@ PYTHONPATH=src python3 -m component_quality.api --database component-quality.sql
 ```
 
 服务提供 JSON 接口与健康检查。进程重启后可以继续读取 SQLite 中的业务状态和审计历史。
+
+## 组件检测方法治理
+
+`component_quality` 服务在检测链上强制执行方法治理：
+
+- `POST /methods` 发布方法版本时冻结适用产品、采样要求、指标公式、量程与判定阈值，版本严格递增且内容不可变；
+- 实验室须先登记仪器校准（`POST /instruments/{id}/calibrations`）并通过参考样件比对（`POST /labs/{id}/comparisons`），才能为正式批次提交读数；
+- 原始读数保留原始数值、单位和设备身份，换算、剔除（`POST /measurements/{id}/exclude`）与合并分析（`POST /lots/{id}/analysis`）都引用确定的方法版本；
+- `POST /lots/{id}/compare-labs` 发现跨实验室系统偏差时自动暂停受影响的未决放行并开启调查版本；已出具的报告不被静默重算，新方法只能通过 `POST /lots/{id}/reevaluate` 复评产生后继结论；
+- 质量委员会通过 `GET /lots/{id}/traceability` 和 `GET /committee/overview` 查看每个结果采用的方法、校准证据、实验室间差异以及仍被暂停的批次。
